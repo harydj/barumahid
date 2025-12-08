@@ -10,43 +10,20 @@ const valueSchema = z.object({
 
 export async function GET() {
   try {
-    const values = await prisma.companyValue.findMany({
-      orderBy: { order: 'asc' },
-    })
-
-    return NextResponse.json(values)
+    // Model CompanyValue tidak ada di schema, return empty array
+    // Components akan menggunakan default data sebagai fallback
+    return NextResponse.json([])
   } catch (error) {
     console.error('Error fetching company values:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch company values' },
-      { status: 500 }
-    )
+    return NextResponse.json([])
   }
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const data = valueSchema.parse(body)
-
-    const value = await prisma.companyValue.create({
-      data,
-    })
-
-    return NextResponse.json(value, { status: 201 })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    console.error('Error creating company value:', error)
-    return NextResponse.json(
-      { error: 'Failed to create company value' },
-      { status: 500 }
-    )
-  }
+  // Model CompanyValue tidak ada di schema
+  return NextResponse.json(
+    { error: 'CompanyValue model is not available in the current schema' },
+    { status: 501 }
+  )
 }
 
