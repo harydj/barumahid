@@ -7,7 +7,7 @@ interface User {
   id: string
   email: string
   name: string
-  role: "admin" | "user"
+  role: "admin" | "user" | "kos_owner"
 }
 
 interface AuthContextType {
@@ -32,30 +32,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false)
   }, [])
 
-  const login = async (email: string, password: string) => {
+  const login = async (emailOrPhone: string, password: string) => {
     setIsLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ emailOrPhone, password }),
+      })
 
-      if (email === "admin@barumahid.com" && password === "admin123") {
-        const adminUser: User = {
-          id: "1",
-          email: "admin@barumahid.com",
-          name: "Admin barumahID",
-          role: "admin",
-        }
-        setUser(adminUser)
-        localStorage.setItem("auth_user", JSON.stringify(adminUser))
-      } else {
-        const regularUser: User = {
-          id: "2",
-          email,
-          name: email.split("@")[0],
-          role: "user",
-        }
-        setUser(regularUser)
-        localStorage.setItem("auth_user", JSON.stringify(regularUser))
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || 'Login failed')
       }
+
+      const data = await res.json()
+      const loggedInUser: User = data.user
+      
+      setUser(loggedInUser)
+      localStorage.setItem("auth_user", JSON.stringify(loggedInUser))
+    } catch (error) {
+      console.error('Login error:', error)
+      throw error
     } finally {
       setIsLoading(false)
     }

@@ -3,34 +3,15 @@ import { motion } from "framer-motion"
 import type React from "react"
 
 import { Mail, Phone, MapPin, Clock, MessageSquare, Send } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
-const contactInfo = [
-  {
-    icon: Phone,
-    title: "WhatsApp",
-    details: ["+62 851-5788-3292", "+62 896-3641-0565"],
-    color: "text-primary",
-  },
-  {
-    icon: Mail,
-    title: "Email",
-    details: ["barumahid@gmail.com", "inditechbluprim@gmail.com"],
-    color: "text-primary",
-  },
-  {
-    icon: MapPin,
-    title: "Kantor Pusat",
-    details: ["Lokasi berbasis di Indonesia", "Layanan Nasional"],
-    color: "text-primary",
-  },
-  {
-    icon: Clock,
-    title: "Jam Operasional",
-    details: ["Senin - Jumat: 08:00 - 17:00", "Sesuai kebutuhan proyek"],
-    color: "text-primary",
-  },
-]
+type ContactInfoItem = {
+  id: string
+  type: string
+  title: string
+  details: string[]
+  order: number
+}
 
 const faqItems = [
   {
@@ -66,14 +47,57 @@ export const ContactForm = () => {
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [contactInfo, setContactInfo] = useState<ContactInfoItem[]>([])
+  const [isLoadingContactInfo, setIsLoadingContactInfo] = useState(true)
+
+  useEffect(() => {
+    async function fetchContactInfo() {
+      try {
+        const res = await fetch('/api/contact/info')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          const mapped = data.map((item: any) => ({
+            ...item,
+            details: Array.isArray(item.details) ? item.details : [],
+            icon: item.type === 'phone' ? Phone : item.type === 'email' ? Mail : item.type === 'location' ? MapPin : Clock,
+            color: "text-primary",
+          }))
+          setContactInfo(mapped)
+        }
+      } catch (error) {
+        console.error('Error fetching contact info:', error)
+      } finally {
+        setIsLoadingContactInfo(false)
+      }
+    }
+    fetchContactInfo()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setIsSubmitting(false)
-    setFormData({ name: "", email: "", phone: "", company: "", projectType: "", message: "" })
+    
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to submit contact form')
+      }
+
+      setFormData({ name: "", email: "", phone: "", company: "", projectType: "", message: "" })
+      alert('Pesan berhasil dikirim! Kami akan menghubungi Anda segera.')
+    } catch (error) {
+      console.error('Error submitting contact form:', error)
+      alert('Gagal mengirim pesan. Silakan coba lagi.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -95,8 +119,11 @@ export const ContactForm = () => {
           transition={{ duration: 0.6 }}
           className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16"
         >
-          {contactInfo.map((info, index) => {
-            const Icon = info.icon
+          {isLoadingContactInfo ? (
+            <div className="col-span-4 text-center text-gray-500">Loading contact info...</div>
+          ) : contactInfo.length > 0 ? (
+            contactInfo.map((info, index) => {
+              const Icon = info.icon as React.ComponentType<{ className?: string }>
             return (
               <motion.div
                 key={index}
@@ -119,7 +146,7 @@ export const ContactForm = () => {
                 </div>
               </motion.div>
             )
-          })}
+          })) : null}
         </motion.div>
 
         {/* Form Section */}

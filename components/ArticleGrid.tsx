@@ -1,9 +1,24 @@
 "use client"
 import { motion } from "framer-motion"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Calendar, Clock, User } from "lucide-react"
 
-const articles = [
+type Article = {
+  id: string
+  title: string
+  excerpt: string
+  category?: string | null
+  categoryId?: string | null
+  publishedAt: string | null
+  readTime?: string | null
+  author?: string | null
+  image?: string | null
+  featured: boolean
+  slug: string
+  views: number
+}
+
+const defaultArticles: Article[] = [
   {
     id: 1,
     title: "Panduan Lengkap Gambar Teknik Konstruksi Modern",
@@ -71,6 +86,26 @@ const categories = ["Semua", "Construction Tips", "Technology", "Case Studies", 
 
 export const ArticleGrid = () => {
   const [selectedCategory, setSelectedCategory] = useState("Semua")
+  const [articles, setArticles] = useState<Article[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchArticles() {
+      try {
+        const res = await fetch('/api/articles?status=published')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setArticles(data)
+        }
+      } catch (error) {
+        console.error('Error fetching articles:', error)
+        setArticles(defaultArticles)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchArticles()
+  }, [])
 
   return (
     <section className="w-full py-20 bg-background">
@@ -104,7 +139,12 @@ export const ArticleGrid = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {articles.map((article, index) => (
+          {isLoading ? (
+            <div className="col-span-3 text-center text-gray-500 py-8">Loading articles...</div>
+          ) : articles.length > 0 ? (
+            articles
+              .filter(article => selectedCategory === "Semua" || article.category === selectedCategory)
+              .map((article, index) => (
             <motion.article
               key={article.id}
               initial={{ opacity: 0, y: 20 }}
@@ -116,12 +156,12 @@ export const ArticleGrid = () => {
               }`}
             >
               <div className="bg-gradient-to-br from-primary/20 to-accent/20 py-12 text-5xl text-center group-hover:scale-110 transition-transform duration-300">
-                {article.image}
+                {article.image || "📄"}
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">
-                    {article.category}
+                    {article.category || "Uncategorized"}
                   </span>
                 </div>
                 <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
@@ -132,20 +172,27 @@ export const ArticleGrid = () => {
                 <div className="flex flex-wrap items-center gap-4 text-xs text-foreground/60 border-t border-gray-100 pt-4">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>{article.date}</span>
+                    <span>{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : "Not published"}</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{article.readTime}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <User className="w-3.5 h-3.5" />
-                    <span>{article.author}</span>
-                  </div>
+                  {article.readTime && (
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>{article.readTime}</span>
+                    </div>
+                  )}
+                  {article.author && (
+                    <div className="flex items-center gap-1">
+                      <User className="w-3.5 h-3.5" />
+                      <span>{article.author}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.article>
-          ))}
+          ))
+          ) : (
+            <div className="col-span-3 text-center text-gray-500 py-8">No articles available</div>
+          )}
         </div>
 
         <motion.div

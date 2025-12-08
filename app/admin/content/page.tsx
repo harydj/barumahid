@@ -3,19 +3,23 @@
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { Plus, Edit2, Trash2, Eye } from "lucide-react"
+import { Plus, Edit2, Trash2, Eye, Home } from "lucide-react"
+import Link from "next/link"
 import { useAuth } from "@/lib/auth-context"
 import { AdminNavbar } from "@/components/AdminNavbar"
 
 interface Article {
-  id: number
+  id: string
   title: string
   excerpt: string
-  category: string
-  image: string
-  publishedAt: string
+  category?: string | null
+  categoryId?: string | null
+  image?: string | null
+  publishedAt: string | null
   status: "draft" | "published"
   views: number
+  slug: string
+  author?: string | null
 }
 
 export default function ContentPage() {
@@ -23,7 +27,7 @@ export default function ContentPage() {
   const { user, isLoading } = useAuth()
   const [articles, setArticles] = useState<Article[]>([])
   const [showForm, setShowForm] = useState(false)
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     excerpt: "",
@@ -62,13 +66,18 @@ export default function ContentPage() {
   }, [user, isLoading, router])
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("articles") || "[]")
-    if (stored.length === 0) {
-      setArticles(defaultArticles)
-      localStorage.setItem("articles", JSON.stringify(defaultArticles))
-    } else {
-      setArticles(stored)
+    async function fetchArticles() {
+      try {
+        const res = await fetch('/api/articles')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setArticles(data)
+        }
+      } catch (error) {
+        console.error('Error fetching articles:', error)
+      }
     }
+    fetchArticles()
   }, [])
 
   if (isLoading) {
@@ -83,45 +92,90 @@ export default function ContentPage() {
     return null
   }
 
-  const handleAddArticle = () => {
+  const handleAddArticle = async () => {
     if (!formData.title || !formData.excerpt) return
 
-    let updated
-    if (editingId) {
-      updated = articles.map((a) =>
-        a.id === editingId ? { ...a, ...formData, publishedAt: new Date().toISOString().split("T")[0] } : a,
-      )
-    } else {
-      updated = [
-        ...articles,
-        {
-          id: Date.now(),
-          ...formData,
-          publishedAt: new Date().toISOString().split("T")[0],
-          views: 0,
-        },
-      ]
-    }
+    try {
+      const slug = formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+      const articleData = {
+        ...formData,
+        slug,
+        publishedAt: formData.status === 'published' ? new Date().toISOString() : null,
+      }
 
-    setArticles(updated)
-    localStorage.setItem("articles", JSON.stringify(updated))
-    setFormData({ title: "", excerpt: "", category: "construction-tips", image: "", status: "draft" })
-    setShowForm(false)
-    setEditingId(null)
+      let res
+      if (editingId) {
+        const article = articles.find(a => a.id === editingId)
+        if (!article) return
+        
+        res = await fetch(`/api/articles/${article.slug}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(articleData),
+        })
+      } else {
+        res = await fetch('/api/articles', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(articleData),
+        })
+      }
+
+      if (!res.ok) {
+        throw new Error('Failed to save article')
+      }
+
+      const newArticle = await res.json()
+      
+      if (editingId) {
+        setArticles(articles.map(a => a.id === editingId ? newArticle : a))
+      } else {
+        setArticles([...articles, newArticle])
+      }
+
+      setFormData({ title: "", excerpt: "", category: "construction-tips", image: "", status: "draft" })
+      setShowForm(false)
+      setEditingId(null)
+    } catch (error) {
+      console.error('Error saving article:', error)
+      alert('Failed to save article')
+    }
   }
 
-  const handleDelete = (id: number) => {
-    const updated = articles.filter((a) => a.id !== id)
-    setArticles(updated)
-    localStorage.setItem("articles", JSON.stringify(updated))
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this article?')) {
+      return
+    }
+
+    try {
+      const article = articles.find(a => a.id === id)
+      if (!article) return
+
+      const res = await fetch(`/api/articles/${article.slug}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to delete article')
+      }
+
+      setArticles(articles.filter((a) => a.id !== id))
+    } catch (error) {
+      console.error('Error deleting article:', error)
+      alert('Failed to delete article')
+    }
   }
 
   const handleEdit = (article: Article) => {
     setFormData({
       title: article.title,
       excerpt: article.excerpt,
-      category: article.category,
-      image: article.image,
+      category: article.category || "construction-tips",
+      image: article.image || "",
       status: article.status,
     })
     setEditingId(article.id)
@@ -137,23 +191,60 @@ export default function ContentPage() {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex items-center justify-between mb-8"
+            className="mb-8"
           >
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Content Management</h1>
-              <p className="text-gray-600">Create and manage articles</p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">Content Management</h1>
+                <p className="text-gray-600">Create and manage articles</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowForm(!showForm)
+                  setEditingId(null)
+                  setFormData({ title: "", excerpt: "", category: "construction-tips", image: "", status: "draft" })
+                }}
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                <Plus size={20} />
+                New Article
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setShowForm(!showForm)
-                setEditingId(null)
-                setFormData({ title: "", excerpt: "", category: "construction-tips", image: "", status: "draft" })
-              }}
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <Link
+              href="/admin/content/homepage"
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group text-center"
             >
-              <Plus size={20} />
-              New Article
-            </button>
+              <Home size={24} className="text-primary mb-2 mx-auto group-hover:scale-110 transition-transform" />
+              <h3 className="font-semibold text-gray-900 text-sm mb-1">Edit Homepage</h3>
+              <p className="text-xs text-gray-600">Hero & Stats</p>
+            </Link>
+            <Link
+              href="/admin/content/services"
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group text-center"
+            >
+              <Edit2 size={24} className="text-primary mb-2 mx-auto group-hover:scale-110 transition-transform" />
+              <h3 className="font-semibold text-gray-900 text-sm mb-1">Services</h3>
+              <p className="text-xs text-gray-600">Manage services</p>
+            </Link>
+            <Link
+              href="/admin/content/features"
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group text-center"
+            >
+              <Edit2 size={24} className="text-primary mb-2 mx-auto group-hover:scale-110 transition-transform" />
+              <h3 className="font-semibold text-gray-900 text-sm mb-1">Features</h3>
+              <p className="text-xs text-gray-600">Manage features</p>
+            </Link>
+            <Link
+              href="/admin/content/pricing"
+              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors group text-center"
+            >
+              <Edit2 size={24} className="text-primary mb-2 mx-auto group-hover:scale-110 transition-transform" />
+              <h3 className="font-semibold text-gray-900 text-sm mb-1">Pricing</h3>
+              <p className="text-xs text-gray-600">Manage pricing</p>
+            </Link>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -248,8 +339,8 @@ export default function ContentPage() {
                         </div>
                         <p className="text-gray-600 mb-3">{article.excerpt}</p>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="capitalize">{article.category.replace("-", " ")}</span>
-                          <span>{article.publishedAt}</span>
+                          <span className="capitalize">{article.category?.replace("-", " ") || "Uncategorized"}</span>
+                          <span>{article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : "Not published"}</span>
                           <span className="flex items-center gap-1">
                             <Eye size={16} />
                             {article.views} views

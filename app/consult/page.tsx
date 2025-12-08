@@ -30,34 +30,40 @@ export default function ConsultPage() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const newConsultation = {
-      id: Date.now(),
-      ...formData,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    }
-
-    const consultations = JSON.parse(localStorage.getItem("consultations") || "[]")
-    consultations.push(newConsultation)
-    localStorage.setItem("consultations", JSON.stringify(consultations))
-
-    setIsSubmitting(false)
-    setIsSubmitted(true)
-
-    setTimeout(() => {
-      setFormData({
-        name: "",
-        email: "",
-        phone: "",
-        company: "",
-        projectType: "structural-design",
-        description: "",
-        budget: "not-specified",
+    try {
+      const res = await fetch('/api/consultations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       })
-      setIsSubmitted(false)
-    }, 3000)
+
+      if (!res.ok) {
+        throw new Error('Failed to submit consultation')
+      }
+
+      setIsSubmitted(true)
+
+      setTimeout(() => {
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          company: "",
+          projectType: "structural-design",
+          description: "",
+          budget: "not-specified",
+        })
+        setIsSubmitted(false)
+        window.location.href = "/"
+      }, 3000)
+    } catch (error) {
+      console.error('Error submitting consultation:', error)
+      alert('Failed to submit consultation. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

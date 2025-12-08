@@ -23,11 +23,16 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "barumahID - Construction Digitization Platform",
-  description: "Professional construction drawing, structural design, and 3D modeling services for your projects",
+  title: "barumahID - Platform Rent-to-Own",
+  description: "Dari Ngekos, Bisa Punya Rumah. Program rent-to-own inovatif yang mengubah biaya sewa menjadi saldo kepemilikan rumah.",
   generator: "v0.app",
   icons: {
-    icon: "/icon.svg",
+    icon: [
+      { url: "/images/Logo BarumahID.png", type: "image/png" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/images/Logo BarumahID.png",
+    shortcut: "/images/Logo BarumahID.png",
   },
 }
 

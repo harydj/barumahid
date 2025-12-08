@@ -8,14 +8,14 @@ import { useAuth } from "@/lib/auth-context"
 import { AdminNavbar } from "@/components/AdminNavbar"
 
 interface Consultation {
-  id: number
+  id: string
   name: string
   email: string
   phone: string
-  company: string
+  company: string | null
   projectType: string
   description: string
-  budget: string
+  budget: string | null
   status: "pending" | "reviewed" | "completed"
   createdAt: string
 }
@@ -34,8 +34,18 @@ export default function ConsultationsPage() {
   }, [user, isLoading, router])
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem("consultations") || "[]")
-    setConsultations(stored)
+    async function fetchConsultations() {
+      try {
+        const res = await fetch('/api/consultations')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setConsultations(data)
+        }
+      } catch (error) {
+        console.error('Error fetching consultations:', error)
+      }
+    }
+    fetchConsultations()
   }, [])
 
   if (isLoading) {
@@ -52,20 +62,52 @@ export default function ConsultationsPage() {
 
   const filteredConsultations = consultations.filter((c) => statusFilter === "all" || c.status === statusFilter)
 
-  const handleStatusChange = (id: number, newStatus: "pending" | "reviewed" | "completed") => {
-    const updated = consultations.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
-    setConsultations(updated)
-    localStorage.setItem("consultations", JSON.stringify(updated))
-    if (selectedConsult?.id === id) {
-      setSelectedConsult({ ...selectedConsult, status: newStatus })
+  const handleStatusChange = async (id: string, newStatus: "pending" | "reviewed" | "completed") => {
+    try {
+      const res = await fetch(`/api/consultations/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to update consultation')
+      }
+
+      const updated = consultations.map((c) => (c.id === id ? { ...c, status: newStatus } : c))
+      setConsultations(updated)
+      if (selectedConsult?.id === id) {
+        setSelectedConsult({ ...selectedConsult, status: newStatus })
+      }
+    } catch (error) {
+      console.error('Error updating consultation:', error)
+      alert('Failed to update consultation')
     }
   }
 
-  const handleDelete = (id: number) => {
-    const updated = consultations.filter((c) => c.id !== id)
-    setConsultations(updated)
-    localStorage.setItem("consultations", JSON.stringify(updated))
-    setSelectedConsult(null)
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this consultation?')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/consultations/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to delete consultation')
+      }
+
+      const updated = consultations.filter((c) => c.id !== id)
+      setConsultations(updated)
+      setSelectedConsult(null)
+    } catch (error) {
+      console.error('Error deleting consultation:', error)
+      alert('Failed to delete consultation')
+    }
   }
 
   return (

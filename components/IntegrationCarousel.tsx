@@ -1,37 +1,36 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { motion } from "framer-motion"
 
 type FeatureItem = {
+  id: string
   title: string
   description: string
-  icon: string
+  icon?: string | null
+  order: number
 }
 
-const features: FeatureItem[] = [
-  {
-    title: "Fast & On Time",
-    description: "Kami berkomitmen menyelesaikan setiap proyek tepat jadwal dengan kualitas terjamin",
-    icon: "⚡",
-  },
-  {
-    title: "Responsive & Customer Focus",
-    description: "Tim kami siap merespons kebutuhan Anda dengan solusi yang disesuaikan setiap saat",
-    icon: "💬",
-  },
-  {
-    title: "Fresh Solution",
-    description: "Inovasi terbaru dalam teknologi konstruksi digital untuk hasil maksimal",
-    icon: "✨",
-  },
-  {
-    title: "Best Deal",
-    description: "Harga kompetitif tanpa mengorbankan kualitas dan profesionalisme layanan",
-    icon: "💰",
-  },
-]
-
 export const IntegrationCarousel = () => {
+  const [features, setFeatures] = useState<FeatureItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchFeatures() {
+      try {
+        const res = await fetch('/api/content/features')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setFeatures(data)
+        }
+      } catch (error) {
+        console.error('Error fetching features:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchFeatures()
+  }, [])
   return (
     <div className="w-full py-24 bg-white">
       <div className="max-w-7xl mx-auto px-8">
@@ -62,16 +61,19 @@ export const IntegrationCarousel = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {features.map((feature, index) => (
+          {isLoading ? (
+            <div className="col-span-2 text-center text-gray-500">Loading features...</div>
+          ) : features.length > 0 ? (
+            features.map((feature, index) => (
             <motion.div
-              key={index}
+                key={feature.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
               className="bg-white border border-gray-200 rounded-xl p-8 hover:shadow-md transition-shadow duration-300"
             >
-              <div className="text-5xl mb-4">{feature.icon}</div>
+                <div className="text-5xl mb-4">{feature.icon || "⭐"}</div>
               <h3
                 className="text-xl font-bold text-foreground mb-3"
                 style={{ fontFamily: "Figtree", fontWeight: "700" }}
@@ -82,7 +84,10 @@ export const IntegrationCarousel = () => {
                 {feature.description}
               </p>
             </motion.div>
-          ))}
+          ))
+          ) : (
+            <div className="col-span-2 text-center text-gray-500">No features available</div>
+          )}
         </div>
       </div>
     </div>

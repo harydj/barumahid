@@ -1,9 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Menu, X } from "lucide-react"
+import { Menu, X, LogOut } from "lucide-react"
 import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 const navigationLinks = [
   {
@@ -11,24 +13,26 @@ const navigationLinks = [
     href: "/",
   },
   {
-    name: "Profile",
-    href: "/profile",
+    name: "Cari Kos",
+    href: "/kos",
   },
   {
-    name: "Service",
-    href: "/service",
+    name: "Simulasi",
+    href: "/simulasi",
   },
   {
-    name: "Article",
-    href: "/article",
+    name: "Tentang Kami",
+    href: "/about",
   },
   {
-    name: "Contact",
+    name: "Kontak",
     href: "/contact",
   },
 ] as any[]
 
 export const PortfolioNavbar = () => {
+  const { user, logout } = useAuth()
+  const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -57,13 +61,18 @@ export const PortfolioNavbar = () => {
           <div className="flex-shrink-0">
             <Link
               href="/"
-              className="text-2xl font-bold text-primary hover:text-primary/80 transition-colors duration-200"
+              className="flex items-center gap-2 text-2xl font-bold text-primary hover:text-primary/80 transition-colors duration-200"
               style={{
                 fontFamily: "Figtree",
                 fontWeight: "700",
               }}
             >
-              barumahID
+              <img
+                src="/images/Logo BarumahID.png"
+                alt="BarumahID Logo"
+                className="h-10 w-auto"
+              />
+              <span>barumahID</span>
             </Link>
           </div>
 
@@ -87,27 +96,59 @@ export const PortfolioNavbar = () => {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => {
-                window.location.href = "/login"
-              }}
-              className="text-foreground hover:text-primary px-4 py-2 text-sm font-medium transition-colors duration-200"
-              style={{
-                fontFamily: "Figtree, sans-serif",
-              }}
-            >
-              Login
-            </button>
-            <Link
-              href="/consult"
-              className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
-              style={{
-                fontFamily: "Figtree",
-                fontWeight: "600",
-              }}
-            >
-              Consult Here
-            </Link>
+            {user ? (
+              <>
+                {user.role !== "admin" && user.role !== "kos_owner" && (
+                  <Link
+                    href="/dashboard"
+                    className="text-foreground hover:text-primary px-4 py-2 text-sm font-medium transition-colors duration-200"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                {user.role === "admin" && (
+                  <Link
+                    href="/admin"
+                    className="text-foreground hover:text-primary px-4 py-2 text-sm font-medium transition-colors duration-200"
+                  >
+                    Admin
+                  </Link>
+                )}
+                {user.role === "kos_owner" && (
+                  <Link
+                    href="/admin/kos"
+                    className="text-foreground hover:text-primary px-4 py-2 text-sm font-medium transition-colors duration-200"
+                  >
+                    Kelola Kos
+                  </Link>
+                )}
+                <button
+                  onClick={() => {
+                    logout()
+                    router.push("/")
+                  }}
+                  className="flex items-center gap-2 text-foreground hover:text-red-600 px-4 py-2 text-sm font-medium transition-colors duration-200"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-foreground hover:text-primary px-4 py-2 text-sm font-medium transition-colors duration-200"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/register"
+                  className="bg-primary text-primary-foreground px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-primary/90 transition-all duration-200 shadow-sm hover:shadow-md whitespace-nowrap"
+                >
+                  Daftar Sekarang
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="md:hidden">
@@ -159,28 +200,65 @@ export const PortfolioNavbar = () => {
                 </Link>
               ))}
               <div className="pt-4 border-t border-border space-y-3">
-                <button
-                  className="w-full text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-muted transition-all duration-200"
-                  style={{
-                    fontFamily: "Figtree",
-                  }}
-                  onClick={() => {
-                    window.location.href = "/login"
-                  }}
-                >
-                  Login
-                </button>
-                <Link
-                  href="/consult"
-                  onClick={closeMobileMenu}
-                  className="w-full inline-block text-center bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-primary/90 transition-all duration-200"
-                  style={{
-                    fontFamily: "Figtree",
-                    fontWeight: "600",
-                  }}
-                >
-                  Consult Here
-                </Link>
+                {user ? (
+                  <>
+                    {user.role !== "admin" && user.role !== "kos_owner" && (
+                      <Link
+                        href="/dashboard"
+                        onClick={closeMobileMenu}
+                        className="w-full inline-block text-center text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-muted transition-all duration-200"
+                      >
+                        Dashboard
+                      </Link>
+                    )}
+                    {user.role === "admin" && (
+                      <Link
+                        href="/admin"
+                        onClick={closeMobileMenu}
+                        className="w-full inline-block text-center text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-muted transition-all duration-200"
+                      >
+                        Admin
+                      </Link>
+                    )}
+                    {user.role === "kos_owner" && (
+                      <Link
+                        href="/admin/kos"
+                        onClick={closeMobileMenu}
+                        className="w-full inline-block text-center text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-muted transition-all duration-200"
+                      >
+                        Kelola Kos
+                      </Link>
+                    )}
+                    <button
+                      onClick={() => {
+                        logout()
+                        closeMobileMenu()
+                        router.push("/")
+                      }}
+                      className="w-full text-center text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-red-50 hover:text-red-600 transition-all duration-200 flex items-center justify-center gap-2"
+                    >
+                      <LogOut size={18} />
+                      Logout
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/login"
+                      onClick={closeMobileMenu}
+                      className="w-full inline-block text-center text-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-muted transition-all duration-200"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      onClick={closeMobileMenu}
+                      className="w-full inline-block text-center bg-primary text-primary-foreground px-4 py-2.5 rounded-lg text-base font-medium hover:bg-primary/90 transition-all duration-200"
+                    >
+                      Daftar Sekarang
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

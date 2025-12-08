@@ -1,0 +1,545 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 1. User & Authentication
+// ============================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String?  @unique
+  name      String
+  password  String   // hashed password
+  role      String   @default("user") // user, admin, kos_owner
+  isVerified Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile           UserProfile?
+  verification      UserVerification?
+  rentToOwnProgram  RentToOwnProgram?
+  rentalContracts   RentalContract[]
+  simulations       Simulation[]
+  constructionApps  ConstructionApplication[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+  @@map("users")
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ktpNumber   String?
+  ktpImage    String?  // URL to KTP image
+  address     String?  @db.Text
+  city        String?
+  province    String?
+  postalCode  String?
+  birthDate   DateTime?
+  gender      String?  // male, female
+  occupation  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("user_profiles")
+}
+
+model UserVerification {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ktpVerified   Boolean  @default(false)
+  phoneVerified Boolean  @default(false)
+  emailVerified Boolean  @default(false)
+  verifiedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("user_verifications")
+}
+
+// ============================================
+// 2. Kos Management
+// ============================================
+
+model Kos {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String   @db.Text
+  address         String   @db.Text
+  city            String
+  province        String
+  postalCode      String?
+  latitude        Float?
+  longitude       Float?
+  priceMonthly    Float
+  priceYearly     Float?
+  type            String   // putra, putri, campur
+  roomType        String   // single, double, triple, dll
+  isBarumahIDPartner Boolean @default(false) // Mitra rent-to-own
+  ownershipPercentage Float? // Persentase saldo yang didapat (jika mitra)
+  status          String   @default("active") // active, inactive, full
+  ownerId         String?
+  owner           KosOwner? @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  facilities      KosFacility[]
+  images          KosImage[]
+  rentalContracts RentalContract[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([slug])
+  @@index([city])
+  @@index([isBarumahIDPartner])
+  @@index([status])
+  @@index([priceMonthly])
+  @@map("kos")
+}
+
+model KosFacility {
+  id        String   @id @default(cuid())
+  kosId     String
+  kos       Kos      @relation(fields: [kosId], references: [id], onDelete: Cascade)
+  name      String
+  icon      String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kosId])
+  @@index([order])
+  @@map("kos_facilities")
+}
+
+model KosImage {
+  id        String   @id @default(cuid())
+  kosId     String
+  kos       Kos      @relation(fields: [kosId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  isPrimary Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([kosId])
+  @@index([order])
+  @@map("kos_images")
+}
+
+model KosOwner {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String
+  address   String?  @db.Text
+  kos       Kos[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("kos_owners")
+}
+
+// ============================================
+// 3. Rent-to-Own System
+// ============================================
+
+model RentToOwnProgram {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          String   @default("ngekos") // ngekos, mengumpulkan_saldo, siap_konstruksi, bangun_rumah, valuasi, kontrak_btn
+  ownershipBalance Float   @default(0) // Saldo kepemilikan saat ini
+  targetBalance   Float?  // Target saldo untuk konstruksi
+  startedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rentalContract  RentalContract?
+  ownershipBalances OwnershipBalance[]
+  paymentHistory  PaymentHistory[]
+  constructionApp ConstructionApplication?
+
+  @@index([userId])
+  @@index([status])
+  @@map("rent_to_own_programs")
+}
+
+model RentalContract {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kosId             String
+  kos               Kos      @relation(fields: [kosId], references: [id], onDelete: Cascade)
+  programId         String?  @unique
+  program           RentToOwnProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  monthlyRent       Float
+  ownershipPercentage Float  // Persentase saldo dari sewa
+  startDate         DateTime
+  endDate           DateTime?
+  status            String   @default("active") // active, completed, cancelled
+  contractDocument  String?  // URL to contract document
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  paymentHistory    PaymentHistory[]
+
+  @@index([userId])
+  @@index([kosId])
+  @@index([status])
+  @@map("rental_contracts")
+}
+
+model OwnershipBalance {
+  id          String   @id @default(cuid())
+  programId   String
+  program     RentToOwnProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  amount      Float
+  source      String   // payment, bonus, adjustment
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([programId])
+  @@index([createdAt])
+  @@map("ownership_balances")
+}
+
+model PaymentHistory {
+  id              String   @id @default(cuid())
+  contractId     String
+  contract        RentalContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  programId       String?
+  program         RentToOwnProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  amount          Float
+  ownershipAmount Float    // Jumlah yang masuk ke saldo kepemilikan
+  paymentDate     DateTime
+  paymentMethod   String?  // transfer, cash, dll
+  status          String   @default("paid") // paid, pending, failed
+  receipt         String?  // URL to receipt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([programId])
+  @@index([paymentDate])
+  @@map("payment_history")
+}
+
+// ============================================
+// 4. Construction & House Design
+// ============================================
+
+model HouseDesign {
+  id          String   @id @default(cuid())
+  name        String   // Tipe 36, Tipe 45, Tipe 54
+  slug        String   @unique
+  description String   @db.Text
+  size        Int      // Luas dalam m²
+  bedrooms    Int
+  bathrooms   Int
+  features    Json?    // Array of features
+  images      Json?    // Array of image URLs
+  basePrice   Float    // Harga dasar estimasi
+  order       Int      @default(0)
+  status      String   @default("active") // active, inactive
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  constructionApps ConstructionApplication[]
+
+  @@index([slug])
+  @@index([order])
+  @@map("house_designs")
+}
+
+model ConstructionApplication {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId     String?  @unique
+  program       RentToOwnProgram? @relation(fields: [programId], references: [id], onDelete: SetNull)
+  designId      String
+  design        HouseDesign @relation(fields: [designId], references: [id], onDelete: Cascade)
+  status        String   @default("pending") // pending, approved, in_progress, completed, cancelled
+  estimatedCost Float?
+  actualCost    Float?
+  startDate     DateTime?
+  completionDate DateTime?
+  address       String   @db.Text
+  city          String
+  province      String
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  progress      ConstructionProgress[]
+  valuation     BTNValuation?
+  btnContract   BTNContract?
+
+  @@index([userId])
+  @@index([programId])
+  @@index([status])
+  @@map("construction_applications")
+}
+
+model ConstructionProgress {
+  id          String   @id @default(cuid())
+  applicationId String
+  application ConstructionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  title       String
+  description String?  @db.Text
+  images      Json?    // Array of image URLs
+  progress    Int      // Percentage 0-100
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([applicationId])
+  @@index([date])
+  @@map("construction_progress")
+}
+
+model BTNValuation {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  application   ConstructionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  valuationAmount Float
+  valuationDate DateTime
+  document      String?  // URL to valuation document
+  notes         String?  @db.Text
+  status        String   @default("pending") // pending, approved, rejected
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([applicationId])
+  @@map("btn_valuations")
+}
+
+model BTNContract {
+  id            String   @id @default(cuid())
+  applicationId String   @unique
+  application   ConstructionApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  contractNumber String? @unique
+  contractAmount Float
+  contractDate  DateTime?
+  document      String?  // URL to contract document
+  status        String   @default("pending") // pending, signed, active, completed
+  signedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([applicationId])
+  @@index([contractNumber])
+  @@map("btn_contracts")
+}
+
+// ============================================
+// 5. Simulation
+// ============================================
+
+model Simulation {
+  id                String   @id @default(cuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  monthlyRent       Float
+  ownershipPercentage Float
+  targetHousePrice  Float
+  rentDuration      Int      // in months
+  estimatedBalance  Float    // Calculated result
+  estimatedMonths   Int      // Estimated months to reach target
+  createdAt         DateTime @default(now())
+
+  results           SimulationResult[]
+
+  @@index([userId])
+  @@map("simulations")
+}
+
+model SimulationResult {
+  id            String   @id @default(cuid())
+  simulationId  String
+  simulation    Simulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  month         Int
+  balance       Float
+  totalPaid     Float
+  createdAt     DateTime @default(now())
+
+  @@index([simulationId])
+  @@index([month])
+  @@map("simulation_results")
+}
+
+// ============================================
+// 6. Content Management (Keep Existing)
+// ============================================
+
+model HomePageContent {
+  id               String   @id @default(cuid())
+  heroTitle        String?
+  heroSubtitle     String?
+  heroDescription  String?  @db.Text
+  stats            Json?    // Array of {value, description}
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("home_page_content")
+}
+
+model FAQ {
+  id          String   @id @default(cuid())
+  question    String   @db.Text
+  answer      String   @db.Text
+  category    String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([order])
+  @@map("faqs")
+}
+
+model ArticleCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  articles    Article[]
+
+  @@index([slug])
+  @@map("article_categories")
+}
+
+model Article {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  excerpt     String          @db.Text
+  content     String?         @db.Text
+  categoryId  String?
+  category    ArticleCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  author      String?
+  image       String?
+  publishedAt DateTime?
+  status      String          @default("draft") // draft, published
+  views       Int             @default(0)
+  featured    Boolean         @default(false)
+  readTime    String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([slug])
+  @@index([status])
+  @@index([categoryId])
+  @@index([publishedAt])
+  @@map("articles")
+}
+
+// ============================================
+// 7. Company Profile (Keep Existing)
+// ============================================
+
+model CompanyProfile {
+  id               String    @id @default(cuid())
+  companyName      String
+  tagline          String?
+  aboutDescription String?   @db.Text
+  vision           String?   @db.Text
+  mission          String?   @db.Text
+  foundingDate     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("company_profile")
+}
+
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  expertise String?
+  image     String?
+  bio       String?  @db.Text
+  linkedin  String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+  @@map("team_members")
+}
+
+// ============================================
+// 8. Navigation & Settings
+// ============================================
+
+model NavigationLink {
+  id        String   @id @default(cuid())
+  name      String
+  href      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([order])
+  @@map("navigation_links")
+}
+
+model FooterSection {
+  id        String       @id @default(cuid())
+  title     String
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  links     FooterLink[]
+
+  @@index([order])
+  @@map("footer_sections")
+}
+
+model FooterLink {
+  id              String         @id @default(cuid())
+  footerSectionId String
+  footerSection   FooterSection  @relation(fields: [footerSectionId], references: [id], onDelete: Cascade)
+  label           String
+  href            String
+  order           Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([footerSectionId])
+  @@index([order])
+  @@map("footer_links")
+}
+
+model ContactInfo {
+  id        String   @id @default(cuid())
+  type      String   // phone, email, location, hours
+  title     String
+  details   Json     // Array of detail strings
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([order])
+  @@map("contact_info")
+}

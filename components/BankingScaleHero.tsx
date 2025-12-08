@@ -10,29 +10,6 @@ type StatItem = {
   delay: number
 }
 
-const stats: StatItem[] = [
-  {
-    value: "6+",
-    description: "Tahun\nberoperasi",
-    delay: 0,
-  },
-  {
-    value: "500+",
-    description: "Proyek\nselesai",
-    delay: 0.2,
-  },
-  {
-    value: "50+",
-    description: "Tim\nprofesional",
-    delay: 0.4,
-  },
-  {
-    value: "9",
-    description: "Keunggulan\nutama",
-    delay: 0.6,
-  },
-]
-
 // Seeded random number generator untuk konsistensi SSR/CSR
 class SeededRandom {
   private seed: number
@@ -74,12 +51,97 @@ export const BankingScaleHero = () => {
   const [isVisible, setIsVisible] = useState(false)
   const [dataPoints] = useState<any[]>(generateDataPoints())
   const [typingComplete, setTypingComplete] = useState(false)
+  const [homePageData, setHomePageData] = useState<{
+    heroTitle?: string
+    heroSubtitle?: string
+    heroDescription?: string
+    stats?: Array<{ value: string; description: string }>
+  } | null>(null)
+  const [stats, setStats] = useState<StatItem[]>([])
 
   useEffect(() => {
     setIsVisible(true)
     const timer = setTimeout(() => setTypingComplete(true), 1000)
     return () => clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    async function fetchHomePageData() {
+      try {
+        const res = await fetch('/api/content/homepage', {
+          cache: 'no-store', // Force fresh data on every request
+        })
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`)
+        }
+        
+        const data = await res.json()
+        
+        // Handle error response
+        if (data.error) {
+          console.error('API error:', data.error, data.details)
+          // Use fallback data
+          setHomePageData({
+            heroTitle: 'Your Project, Made Easy',
+            heroSubtitle: 'Professional Construction Solutions',
+            heroDescription: 'Digitalisasi konstruksi inovatif yang menyediakan layanan complete construction solutions.',
+          })
+          setStats([
+            { value: "6+", description: "Tahun\nberoperasi", delay: 0 },
+            { value: "500+", description: "Proyek\nselesai", delay: 0.2 },
+            { value: "50+", description: "Tim\nprofesional", delay: 0.4 },
+            { value: "9", description: "Keunggulan\nutama", delay: 0.6 },
+          ])
+          return
+        }
+        
+        // API now returns data directly
+        if (data) {
+          setHomePageData(data)
+          if (data.stats && Array.isArray(data.stats) && data.stats.length > 0) {
+            const statsWithDelay = data.stats.map((stat: any, index: number) => ({
+              value: stat.value || '',
+              description: stat.description || '',
+              delay: index * 0.2,
+            }))
+            setStats(statsWithDelay)
+          } else {
+            // Fallback stats if empty
+            setStats([
+              { value: "6+", description: "Tahun\nberoperasi", delay: 0 },
+              { value: "500+", description: "Proyek\nselesai", delay: 0.2 },
+              { value: "50+", description: "Tim\nprofesional", delay: 0.4 },
+              { value: "9", description: "Keunggulan\nutama", delay: 0.6 },
+            ])
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching homepage data:', error)
+        // Fallback to default data
+        setHomePageData({
+          heroTitle: 'Your Project, Made Easy',
+          heroSubtitle: 'Professional Construction Solutions',
+          heroDescription: 'Digitalisasi konstruksi inovatif yang menyediakan layanan complete construction solutions.',
+        })
+        setStats([
+          { value: "6+", description: "Tahun\nberoperasi", delay: 0 },
+          { value: "500+", description: "Proyek\nselesai", delay: 0.2 },
+          { value: "50+", description: "Tim\nprofesional", delay: 0.4 },
+          { value: "9", description: "Keunggulan\nutama", delay: 0.6 },
+        ])
+      }
+    }
+    fetchHomePageData()
+  }, [])
+
+  if (!homePageData) {
+    return (
+      <div className="w-full overflow-hidden bg-white min-h-[600px] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full overflow-hidden bg-white">
@@ -106,7 +168,7 @@ export const BankingScaleHero = () => {
                   }}
                   className="block whitespace-nowrap overflow-hidden text-primary relative z-10"
                 >
-                  Professional Construction Solutions
+                  {homePageData?.heroSubtitle || "Professional Construction Solutions"}
                 </motion.span>
                 <motion.span
                   initial={{
@@ -131,15 +193,7 @@ export const BankingScaleHero = () => {
                 fontFamily: "var(--font-figtree), Figtree",
               }}
             >
-              Your Project,{" "}
-              <span
-                className="text-primary"
-                style={{
-                  fontWeight: "700",
-                }}
-              >
-                Made Easy
-              </span>
+              {homePageData?.heroTitle}
             </h2>
 
             <p
@@ -149,9 +203,7 @@ export const BankingScaleHero = () => {
                 fontWeight: "400",
               }}
             >
-              Digitalisasi konstruksi inovatif yang menyediakan layanan complete construction solutions. Dari
-              construction drawing, structural design, hingga 3D modeling dengan teknologi LBAG (Lean, BIM, AI, Green
-              Construction).
+              {homePageData?.heroDescription || "Digitalisasi konstruksi inovatif yang menyediakan layanan complete construction solutions. Dari construction drawing, structural design, hingga 3D modeling dengan teknologi LBAG (Lean, BIM, AI, Green Construction)."}
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -230,7 +282,7 @@ export const BankingScaleHero = () => {
           <div className="col-span-12">
             <div className="overflow-visible pb-5">
               <div className="grid grid-cols-12 gap-5 relative z-10">
-                {stats.map((stat, index) => (
+                {stats.length > 0 && stats.map((stat, index) => (
                   <div key={index} className="col-span-6 md:col-span-3">
                     <motion.div
                       initial={{
@@ -258,7 +310,7 @@ export const BankingScaleHero = () => {
                         {stat.value}
                       </span>
                       <p className="text-sm leading-5 text-foreground/60 m-0 whitespace-pre-line font-medium">
-                        {stat.description}
+                        {stat.description.replace(/\\n/g, '\n')}
                       </p>
                     </motion.div>
                   </div>

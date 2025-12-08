@@ -44,3 +44,5 @@ next-env.d.ts
 
 # extracted images
 /extracted_images
+
+/lib/generated/prisma

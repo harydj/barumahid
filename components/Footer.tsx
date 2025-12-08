@@ -14,43 +14,43 @@ type FooterSection = {
 
 const defaultSections: FooterSection[] = [
   {
-    title: "Services",
+    title: "Platform",
     links: [
-      { label: "Construction Drawing", href: "#services" },
-      { label: "Structural Design", href: "#services" },
-      { label: "3D Modeling", href: "#services" },
-      { label: "Cost Estimation", href: "#services" },
+      { label: "Cari Kos Mitra", href: "/kos" },
+      { label: "Simulasi Rumah", href: "/simulasi" },
+      { label: "Program Rent-to-Own", href: "/rent-to-own" },
+      { label: "Ready to Build", href: "/ready-to-build" },
     ],
   },
   {
-    title: "Company",
+    title: "Perusahaan",
     links: [
-      { label: "About Us", href: "#about" },
-      { label: "Articles", href: "#article" },
-      { label: "Contact", href: "#contact" },
-      { label: "Careers", href: "#careers" },
+      { label: "Tentang Kami", href: "/about" },
+      { label: "Artikel", href: "/article" },
+      { label: "Kontak", href: "/contact" },
+      { label: "Karir", href: "#careers" },
     ],
   },
   {
-    title: "Support",
+    title: "Bantuan",
     links: [
-      { label: "Documentation", href: "#docs" },
+      { label: "Panduan", href: "#guide" },
       { label: "FAQ", href: "#faq" },
-      { label: "Portfolio", href: "#portfolio" },
-      { label: "Terms", href: "#terms" },
+      { label: "Syarat & Ketentuan", href: "#terms" },
+      { label: "Kebijakan Privasi", href: "#privacy" },
     ],
   },
 ]
 
 export const Footer = ({
   companyName = "barumahID",
-  tagline = "Platform Digitalisasi Inovatif Konstruksi",
+  tagline = "Dari Ngekos, Bisa Punya Rumah",
   sections = defaultSections,
   socialLinks = {
     twitter: "https://twitter.com",
     linkedin: "https://linkedin.com",
     github: undefined,
-    email: "hello@barumahid.com",
+    email: "barumahid@gmail.com",
   },
 }: {
   companyName?: string
@@ -72,12 +72,19 @@ export const Footer = ({
             className="col-span-2"
           >
             <div className="mb-6">
-              <h3
-                className="text-2xl font-bold text-background mb-2"
-                style={{ fontFamily: "Figtree", fontWeight: "700" }}
-              >
-                {companyName}
-              </h3>
+              <div className="flex items-center gap-2 mb-2">
+                <img
+                  src="/images/Logo BarumahID.png"
+                  alt="BarumahID Logo"
+                  className="h-8 w-auto"
+                />
+                <h3
+                  className="text-2xl font-bold text-background"
+                  style={{ fontFamily: "Figtree", fontWeight: "700" }}
+                >
+                  {companyName}
+                </h3>
+              </div>
               <p className="text-sm leading-5 text-background/70 max-w-xs" style={{ fontFamily: "Figtree" }}>
                 {tagline}
               </p>
@@ -86,7 +93,9 @@ export const Footer = ({
             <div className="space-y-3 mb-6 text-sm text-background/80">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4" />
-                <span>+62-XXX-XXXX-XXXX</span>
+                <a href="https://wa.me/6285157883292" target="_blank" rel="noopener noreferrer" className="hover:text-background transition-colors">
+                  +62 851-5788-3292
+                </a>
               </div>
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
@@ -180,14 +189,14 @@ export const Footer = ({
                 className="text-sm text-background/70 hover:text-background transition-colors duration-150"
                 style={{ fontFamily: "Figtree" }}
               >
-                Privacy Policy
+                Kebijakan Privasi
               </a>
               <a
                 href="#terms"
                 className="text-sm text-background/70 hover:text-background transition-colors duration-150"
                 style={{ fontFamily: "Figtree" }}
               >
-                Terms of Service
+                Syarat & Ketentuan
               </a>
             </div>
           </div>

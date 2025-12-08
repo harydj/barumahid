@@ -1,42 +1,40 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Plus } from "lucide-react"
 
 type FAQItem = {
+  id: string
   question: string
   answer: string
+  category?: string | null
+  order: number
 }
-
-const defaultFAQs: FAQItem[] = [
-  {
-    question: "Apa itu barumahID dan bagaimana cara kerjanya?",
-    answer:
-      "barumahID adalah platform digitalisasi inovatif untuk industri konstruksi yang menyediakan layanan construction drawing, structural design, dan 3D modeling. Kami menggunakan teknologi CAD dan BIM terkini untuk menghasilkan desain presisi tinggi. Tim profesional kami bekerja sama dengan klien untuk memahami kebutuhan spesifik proyek dan memberikan solusi terbaik.",
-  },
-  {
-    question: "Berapa lama waktu pengerjaan untuk setiap proyek?",
-    answer:
-      "Waktu pengerjaan tergantung pada kompleksitas dan skala proyek. Untuk proyek kecil, biasanya memerlukan 1-2 minggu. Proyek menengah berkisar 3-4 minggu, sedangkan proyek besar bisa memerlukan 1-3 bulan. Kami selalu berkomitmen menyelesaikan pekerjaan tepat jadwal sesuai kesepakatan awal.",
-  },
-  {
-    question: "Apakah layanan Anda mencakup konsultasi teknis?",
-    answer:
-      "Ya, semua paket kami termasuk konsultasi dengan tim engineer profesional kami. Kami siap memberikan rekomendasi teknis, analisis struktur, dan solusi inovatif untuk optimasi desain dan budget proyek Anda. Untuk proyek enterprise, kami menyediakan account manager dedicated.",
-  },
-  {
-    question: "Bisakah Anda mengerjakan revisi dan modifikasi desain?",
-    answer:
-      "Tentu saja. Kami memberikan beberapa putaran revisi sesuai paket yang dipilih. Tim kami siap mengimplementasikan feedback Anda dengan cepat dan profesional. Revisi tak terbatas juga tersedia sebagai layanan tambahan jika diperlukan.",
-  },
-]
 
 export const FAQSection = ({
   title = "Pertanyaan yang Sering Diajukan",
-  faqs = defaultFAQs,
-}: { title?: string; faqs?: FAQItem[] }) => {
+}: { title?: string }) => {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [faqs, setFaqs] = useState<FAQItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    async function fetchFAQs() {
+      try {
+        const res = await fetch('/api/content/faq')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          setFaqs(data)
+        }
+      } catch (error) {
+        console.error('Error fetching FAQs:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchFAQs()
+  }, [])
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index)
@@ -60,8 +58,11 @@ export const FAQSection = ({
 
           <div className="lg:col-span-8">
             <div className="space-y-0">
-              {faqs.map((faq, index) => (
-                <div key={index} className="border-b border-border last:border-b-0">
+              {isLoading ? (
+                <div className="text-center text-gray-500 py-8">Loading FAQs...</div>
+              ) : faqs.length > 0 ? (
+                faqs.map((faq, index) => (
+                  <div key={faq.id} className="border-b border-border last:border-b-0">
                   <button
                     onClick={() => toggleFAQ(index)}
                     className="w-full flex items-center justify-between py-6 text-left group hover:opacity-70 transition-opacity duration-150"
@@ -122,7 +123,10 @@ export const FAQSection = ({
                     )}
                   </AnimatePresence>
                 </div>
-              ))}
+              ))
+              ) : (
+                <div className="text-center text-gray-500 py-8">No FAQs available</div>
+              )}
             </div>
           </div>
         </div>

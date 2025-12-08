@@ -30,7 +30,15 @@ export default function LoginPage() {
       }
 
       await login(email, password)
-      router.push("/admin")
+      // Redirect based on user role
+      const user = JSON.parse(localStorage.getItem("auth_user") || "{}")
+      if (user.role === "admin") {
+        router.push("/admin")
+      } else if (user.role === "kos_owner") {
+        router.push("/admin/kos")
+      } else {
+        router.push("/dashboard")
+      }
     } catch (err) {
       setError("Login failed. Please try again.")
     } finally {
@@ -63,17 +71,17 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+                Email atau No HP
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="you@example.com atau +6281234567890"
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white text-gray-900 placeholder-gray-500 transition-all"
               />
-              <p className="text-xs text-gray-500 mt-1.5">Demo: admin@barumahid.com</p>
+              <p className="text-xs text-gray-500 mt-1.5">Demo: admin@barumahid.com atau user@example.com</p>
             </div>
 
             <div>
@@ -117,12 +125,21 @@ export default function LoginPage() {
             </button>
           </form>
 
+          <div className="mt-6">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-primary hover:underline text-center block"
+            >
+              Lupa password?
+            </Link>
+          </div>
+
           <div className="mt-8 pt-8 border-t border-gray-200">
             <p className="text-center text-sm text-gray-600">
-              Don't have an account?{" "}
-              <a href="#" className="text-primary font-medium hover:underline">
-                Contact us
-              </a>
+              Belum punya akun?{" "}
+              <Link href="/register" className="text-primary font-medium hover:underline">
+                Daftar di sini
+              </Link>
             </p>
           </div>
         </motion.div>
