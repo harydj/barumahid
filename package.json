@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "next build && node scripts/copy-public.js",
     "dev": "next dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
