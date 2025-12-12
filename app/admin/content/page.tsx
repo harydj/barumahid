@@ -28,36 +28,19 @@ export default function ContentPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    title: string
+    excerpt: string
+    category: string
+    image: string
+    status: "draft" | "published"
+  }>({
     title: "",
     excerpt: "",
     category: "construction-tips",
     image: "",
-    status: "draft" as const,
+    status: "draft",
   })
-
-  const defaultArticles: Article[] = [
-    {
-      id: 1,
-      title: "5 Tips for Efficient Construction Planning",
-      excerpt: "Learn how to plan your construction project efficiently...",
-      category: "construction-tips",
-      image: "/construction-planning.jpg",
-      publishedAt: "2024-01-15",
-      status: "published",
-      views: 1250,
-    },
-    {
-      id: 2,
-      title: "Latest Technologies in 3D Modeling",
-      excerpt: "Discover the latest advancements in 3D modeling technology...",
-      category: "technology",
-      image: "/3d-modeling.jpg",
-      publishedAt: "2024-01-10",
-      status: "published",
-      views: 890,
-    },
-  ]
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -176,7 +159,7 @@ export default function ContentPage() {
       excerpt: article.excerpt,
       category: article.category || "construction-tips",
       image: article.image || "",
-      status: article.status,
+      status: article.status as "draft" | "published",
     })
     setEditingId(article.id)
     setShowForm(true)

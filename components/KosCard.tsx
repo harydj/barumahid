@@ -87,3 +87,4 @@ export const KosCard = ({ kos }: KosCardProps) => {
   )
 }
 
+

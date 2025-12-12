@@ -135,3 +135,4 @@ export const SimulationResult = ({ estimatedBalance, estimatedMonths, targetPric
   )
 }
 
+

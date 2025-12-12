@@ -21,6 +21,10 @@ const navigationLinks = [
     href: "/simulasi",
   },
   {
+    name: "Portfolio",
+    href: "/portfolio",
+  },
+  {
     name: "Tentang Kami",
     href: "/about",
   },
